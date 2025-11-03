@@ -38,6 +38,21 @@ const orderArb = fc.record({
   items: fc.array(orderItemArb, { minLength: 1, maxLength: 5 })
 });
 
+const profileArb = fc.record({
+  tier: tierArb
+});
+
+const deliveryArb = fc.record({
+  zone: zoneArb,
+  rush: fc.boolean()
+});
+
+const contextArb = fc.record({
+  profile: profileArb,
+  delivery: deliveryArb,
+  coupon: fc.option(fc.constantFrom('PIEROGI-BOGO', 'FIRST10'), { nil: null })
+});
+
 
 // ------------------------------------------------------------------------------
 // To test discounts, tax, delivery and total, you will need to add more
@@ -81,6 +96,32 @@ describe('Property-Based Tests for Orders', () => {
     //     { numRuns: 50 } // you can adjust the number of runs as needed
     //   );
     // });
+
+    // subtotal must = per-item sum of unitPriceCents * qty, plus add ons per pack
+    it('subtotal equals sum of unit prices and add-ons', () => {
+      fc.assert(
+        fc.property(orderArb, (order) => {
+          const addOnPrices = {
+            'sour-cream': 99,
+            'fried-onion': 149,
+            'bacon-bits': 199
+          };
+          const expected = order.items.reduce((acc, item) => {
+            let itemCost = item.unitPriceCents * item.qty;
+            if (item.addOns && item.addOns.length > 0) {
+              for (const addOn of item.addOns) {
+                itemCost += (addOnPrices[addOn] || 0) * item.qty;
+              }
+            }
+            return acc+itemCost;
+          }, 0);
+
+          const actual = subtotal(order);
+          return actual === expected;
+        }),
+        { numRuns: 50 }
+      );
+    });
 
   });
 });
