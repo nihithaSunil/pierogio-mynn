@@ -4,7 +4,7 @@ const { subtotal } = require('../../src/subtotal');
 const { discounts } = require('../../src/discounts');
 const { total } = require('../../src/total');
 const { tax } = require('../../src/tax');
-const { delivery } = require('../../src/delivery');
+const { deliveryFee } = require('../../src/delivery');
 
 // These arbitrary generators provide primitive building blocks for constructing orders and contexts in property-based tests
 //
@@ -71,7 +71,6 @@ describe('Property-Based Tests for Orders', () => {
     // You can adapt the starter code below.
     // Feel free to copy, paste, and modify as needed multiple times.
     // ---------------------------------------------------------------------------
-    //
     // it('subtotal should always be non-negative integer', () => {
     //   fc.assert(
     //     fc.property(, (order) => { // add the appropriate arbitraries here
@@ -82,5 +81,14 @@ describe('Property-Based Tests for Orders', () => {
     //   );
     // });
 
+    it('tax should always be non-negative integer', () => {
+      fc.assert(
+        fc.property(orderArb, (order) => { // add the appropriate arbitraries here
+          const result = tax(order); // change this to the function you are testing
+          return result >= 0 && Number.isInteger(result); // add the property you want to verify
+        }),
+        { numRuns: 50 } // you can adjust the number of runs as needed
+      );
+    });
   });
 });
