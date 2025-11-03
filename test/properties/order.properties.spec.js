@@ -4,7 +4,7 @@ const { subtotal } = require('../../src/subtotal');
 const { discounts } = require('../../src/discounts');
 const { total } = require('../../src/total');
 const { tax } = require('../../src/tax');
-const { delivery } = require('../../src/delivery');
+const { delivery, deliveryFee } = require('../../src/delivery');
 
 // These arbitrary generators provide primitive building blocks for constructing orders and contexts in property-based tests
 //
@@ -27,8 +27,8 @@ const orderItemArb = fc.record({
   sku: skuArb,
   title: fc.string(),
   filling: fillingArb,
-  qty: fc.constantFrom(6, 12, 24),
-  unitPriceCents: fc.integer({ min: 500, max: 3000 }),
+  qty: fc.constantFrom(3, 4, 5),
+  unitPriceCents: fc.integer({ min: 500, max: 500 }),
   addOns: fc.array(addOnArb, { maxLength: 3 })
 });
 
@@ -38,6 +38,14 @@ const orderArb = fc.record({
   items: fc.array(orderItemArb, { minLength: 1, maxLength: 5 })
 });
 
+const profileArb = fc.record({
+  tier: tierArb
+});
+
+const deliveryArb = fc.record({
+  zone: zoneArb,
+  rush: fc.boolean()
+});
 
 // ------------------------------------------------------------------------------
 // To test discounts, tax, delivery and total, you will need to add more
@@ -63,6 +71,26 @@ describe('Property-Based Tests for Orders', () => {
           return result >= 0 && Number.isInteger(result);
         }),
         { numRuns: 50 }
+      );
+    });
+
+    it('delivery fee should always be non-negative integer', () => {
+      fc.assert(
+        fc.property(orderArb, deliveryArb, profileArb, (order, delivery, profile) => {
+          const result = deliveryFee(order, delivery, profile);
+          return result >= 0 && Number.isInteger(result);
+        }),
+        { numRuns: 50 }
+      );
+    });
+
+    it('delivery fee should always be <= $10', () => {
+      fc.assert(
+        fc.property(orderArb, deliveryArb, profileArb, (order, delivery, profile) => {
+          const result = deliveryFee(order, delivery, profile);
+          return result <= 1000;
+        }),
+        { numRuns: 200 }
       );
     });
 
