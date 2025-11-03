@@ -38,6 +38,22 @@ const orderArb = fc.record({
   items: fc.array(orderItemArb, { minLength: 1, maxLength: 5 })
 });
 
+const profileArb = fc.record({
+  tier: tierArb
+});
+
+const deliveryArb = fc.record({
+  zone: zoneArb,
+  rush: fc.boolean()
+});
+
+const contextArb = fc.record({
+  profile: profileArb,
+  delivery: deliveryArb,
+  coupon: fc.option(fc.constantFrom('PIEROGI-BOGO', 'FIRST10'), { nil: null })
+});
+
+
 
 // ------------------------------------------------------------------------------
 // To test discounts, tax, delivery and total, you will need to add more
@@ -61,6 +77,27 @@ describe('Property-Based Tests for Orders', () => {
         fc.property(orderArb, (order) => {
           const result = subtotal(order);
           return result >= 0 && Number.isInteger(result);
+        }),
+        { numRuns: 50 }
+      );
+    });
+
+    it('discounts should always be non-negative integer', () => {
+      fc.assert(
+        fc.property(orderArb, contextArb, (order, context) => {
+          const result = discounts(order, context.profile, context.coupon);
+          return result >= 0 && Number.isInteger(result);
+        }),
+        { numRuns: 50 }
+      );
+    });
+
+    it('discounts should never exceed subtotal', () => {
+      fc.assert(
+        fc.property(orderArb, contextArb, (order, context) => {
+          const orderSubtotal = subtotal(order);
+          const orderDiscounts = discounts(order, context.profile, context.coupon);
+          return orderDiscounts <= orderSubtotal;
         }),
         { numRuns: 50 }
       );
