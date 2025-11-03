@@ -47,6 +47,14 @@ const deliveryArb = fc.record({
   rush: fc.boolean()
 });
 
+const contextArb = fc.record({
+  profile: profileArb,
+  delivery: deliveryArb,
+  coupon: fc.option(fc.constantFrom('PIEROGI-BOGO', 'FIRST10'), { nil: null })
+});
+
+
+
 // ------------------------------------------------------------------------------
 // To test discounts, tax, delivery and total, you will need to add more
 // arbitraries to represent the context in which an order is placed.
@@ -74,10 +82,10 @@ describe('Property-Based Tests for Orders', () => {
       );
     });
 
-    it('delivery fee should always be non-negative integer', () => {
+    it('discounts should always be non-negative integer', () => {
       fc.assert(
-        fc.property(orderArb, deliveryArb, profileArb, (order, delivery, profile) => {
-          const result = deliveryFee(order, delivery, profile);
+        fc.property(orderArb, contextArb, (order, context) => {
+          const result = discounts(order, context.profile, context.coupon);
           return result >= 0 && Number.isInteger(result);
         }),
         { numRuns: 50 }
@@ -93,13 +101,23 @@ describe('Property-Based Tests for Orders', () => {
         { numRuns: 200 }
       );
     });
+  
+    it('discounts should never exceed subtotal', () => {
+      fc.assert(
+        fc.property(orderArb, contextArb, (order, context) => {
+          const orderSubtotal = subtotal(order);
+          const orderDiscounts = discounts(order, context.profile, context.coupon);
+          return orderDiscounts <= orderSubtotal;
+        }),
+        { numRuns: 50 }
+      );
+    });
 
     // ---------------------------------------------------------------------------
     // Add more invariant properties for discounts, tax, delivery, and total here
     // You can adapt the starter code below.
     // Feel free to copy, paste, and modify as needed multiple times.
     // ---------------------------------------------------------------------------
-    //
     // it('subtotal should always be non-negative integer', () => {
     //   fc.assert(
     //     fc.property(, (order) => { // add the appropriate arbitraries here
@@ -110,5 +128,14 @@ describe('Property-Based Tests for Orders', () => {
     //   );
     // });
 
+    it('tax should always be non-negative integer', () => {
+      fc.assert(
+        fc.property(orderArb, (order) => { // add the appropriate arbitraries here
+          const result = tax(order); // change this to the function you are testing
+          return result >= 0 && Number.isInteger(result); // add the property you want to verify
+        }),
+        { numRuns: 50 } // you can adjust the number of runs as needed
+      );
+    });
   });
 });
